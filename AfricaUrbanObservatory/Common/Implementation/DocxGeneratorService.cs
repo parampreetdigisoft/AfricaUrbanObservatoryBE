@@ -90,7 +90,7 @@ namespace AfricaUrbanObservatory.Common.Implementation
                 {
                     CityID = pillarData.CityID,
                     CityName = pillarData.CityName,
-                    State = pillarData.State,
+                    AdministrativeDivision = pillarData.AdministrativeDivision,
                     Country = pillarData.Country,
                     ScoringYear = pillarData.AIDataYear,
                     AIProgress = pillarData.AIProgress
@@ -994,7 +994,7 @@ namespace AfricaUrbanObservatory.Common.Implementation
         ///
         ///  ┌─────────────────────────────────────────┬────────────┐
         ///  │  [Title — bold white 21pt]              │ [  LOGO  ] │
-        ///  │  City, State, Country | Data Year: YYYY │ [  white ] │
+        ///  │  City, AdministrativeDivision, Country | Data Year: YYYY │ [  white ] │
         ///  │  Generated: Mon DD, YYYY               │ [   box  ] │
         ///  └─────────────────────────────────────────┴────────────┘
         ///  ─────────── divider (#d9e2df) ───────────────────────────
@@ -1098,7 +1098,7 @@ namespace AfricaUrbanObservatory.Common.Implementation
 
             leftCell.Append(
                 HeaderParagraph(title, "42", "FFFFFF", true, "40"),
-                HeaderParagraph($"{data.CityName}, {data.State}, {data.Country} | Data Year: {data.ScoringYear}", "20", "E8F3F0", false, "20"),
+                HeaderParagraph($"{data.CityName}, {data.Country},{data.Region} | Data Year: {data.ScoringYear}", "20", "E8F3F0", false, "20"),
                 HeaderParagraph($"Generated: {DateTime.Now:MMM dd, yyyy}", "16", "CFE3DD", false, "0")
             );
 

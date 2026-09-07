@@ -3,7 +3,7 @@
     public class City
     {
         public int CityID { get; set; }
-        public string State { get; set; }       
+        public string AdministrativeDivision { get; set; }       // Changed from State to AdministrativeDivision
         public string CityName { get; set; }      
         public string? PostalCode { get; set; }      
         public string? Region { get; set; }

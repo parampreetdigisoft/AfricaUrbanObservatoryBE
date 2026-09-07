@@ -75,7 +75,7 @@ namespace AfricaUrbanObservatory.Services
                 if (resutl == null || resutl.Success != true)
                 {
                     return ResultResponseDto<ChatResponseDto>.Failure(
-                        new[] { resutl?.Message ?? "Failed to query request from VUI Aevum." }
+                        new[] { resutl?.Message ?? "Failed to query request from AUI Aevum." }
                     );
                 }
 
@@ -148,7 +148,7 @@ namespace AfricaUrbanObservatory.Services
                 }
                 var cityResult = new CityRankingResponseDto
                 {
-                    State = city.State,
+                    AdministrativeDivision = city.AdministrativeDivision,
                     CityID = city.CityID,
                     CityName = city.CityName,
                     CityRank = city.CityRank,
@@ -235,7 +235,7 @@ namespace AfricaUrbanObservatory.Services
                 if (result == null || result.Success != true)
                 {
                     return ResultResponseDto<ChatResponseDto>.Failure(
-                        new[] { result?.Message ?? "Failed to query request from VUI Aevum." }
+                        new[] { result?.Message ?? "Failed to query request from AUI Aevum." }
                     );
                 }
 
@@ -269,7 +269,7 @@ namespace AfricaUrbanObservatory.Services
                 if (resutl == null || resutl.Success != true)
                 {
                     return ResultResponseDto<ChatResponseDto>.Failure(
-                        new[] { resutl?.Message ?? "Failed to query request from VUI Aevum." }
+                        new[] { resutl?.Message ?? "Failed to query request from AUI Aevum." }
                     );
                 }
 

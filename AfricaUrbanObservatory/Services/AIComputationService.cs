@@ -199,7 +199,7 @@ namespace AfricaUrbanObservatory.Services
                 select new AiCitySummeryDto
                 {
                     CityID = c.CityID,
-                    State = c.State ?? string.Empty,
+                    AdministrativeDivision = c.AdministrativeDivision ?? string.Empty,
                     CityName = c.CityName ?? string.Empty,
                     Country = c.Country ?? string.Empty,
                     Image = c.Image ?? string.Empty,
@@ -281,7 +281,7 @@ namespace AfricaUrbanObservatory.Services
                         PillarScoreID = x.score?.PillarScoreID ?? 0,
                         CityID = x.score?.CityID ?? cityID,
                         CityName = x.score?.City?.CityName ?? "",
-                        State = x.score?.City?.State ?? "",
+                        AdministrativeDivision = x.score?.City?.AdministrativeDivision ?? "",
                         Country = x.score?.City?.Country ?? "",
                         PillarID = x.pillar.PillarID,
                         PillarName = x.pillar.PillarName,
@@ -592,7 +592,7 @@ namespace AfricaUrbanObservatory.Services
                                 PillarScoreID = x.score?.PillarScoreID ?? 0,
                                 CityID = x.score?.CityID ?? cityId,
                                 CityName = x.score?.City?.CityName ?? "",
-                                State = x.score?.City?.State ?? "",
+                                AdministrativeDivision = x.score?.City?.AdministrativeDivision ?? "",
                                 Country = x.score?.City?.Country ?? "",
                                 PillarID = x.pillar.PillarID,
                                 PillarName = x.pillar.PillarName,
@@ -1135,7 +1135,7 @@ namespace AfricaUrbanObservatory.Services
                 {
                     CityID = c.CityID,
                     CityName = c.CityName,
-                    State = c.State,
+                    AdministrativeDivision = c.AdministrativeDivision,
                     Country = c.Country,
                     Region = c.Region,
                     PostalCode = c.PostalCode,

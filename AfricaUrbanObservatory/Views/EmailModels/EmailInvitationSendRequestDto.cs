@@ -9,7 +9,7 @@
             ApiUrl = "";
             MsgText = "";
             ApplicationUrl = "";
-            DescriptionAboutBtnText =  "If you'd like to change your password, please click the button below. \nOtherwise, you can safely ignore this email and log in directly to continue using the app.";
+            DescriptionAboutBtnText =  "If you'd like to change your password, please click the button below. \nOtherwise, you can safely ignore this email and log in directly to continue using African Urban Index.";
             BtnText = "Reset Password";
             IsShowBtnText = true;
             IsLoginBtn = true;

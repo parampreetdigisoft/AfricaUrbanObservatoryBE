@@ -206,7 +206,7 @@ namespace AfricaUrbanObservatory.Common.Implementation
 
         private AiCitySummeryDto SanitizeCitySummary(AiCitySummeryDto city)
         {
-            city.State = Clean(city.State);
+            city.AdministrativeDivision = Clean(city.AdministrativeDivision);
             city.CityName = Clean(city.CityName);
             city.Country = Clean(city.Country);
             city.Region =Clean(city.Region);
@@ -291,7 +291,7 @@ namespace AfricaUrbanObservatory.Common.Implementation
         {
             foreach (var p in pillars)
             {
-                p.State = Clean(p.State);
+                p.AdministrativeDivision = Clean(p.AdministrativeDivision);
                 p.CityName = Clean(p.CityName);
                 p.Country = Clean(p.Country);
 
@@ -1792,7 +1792,7 @@ namespace AfricaUrbanObservatory.Common.Implementation
                             .Bold()
                             .FontColor(Colors.White);
 
-                        col.Item().Text($"{data.CityName}, {data.State}, {data.Country} | Data Year: {data.ScoringYear}")
+                        col.Item().Text($"{data.CityName}, {data.Country},{data.Region} | Data Year: {data.ScoringYear}")
                             .FontSize(10)
                             .FontColor("#E8F3F0");
 
@@ -1836,7 +1836,7 @@ namespace AfricaUrbanObservatory.Common.Implementation
                             .Bold()
                             .FontColor(Colors.White);
 
-                        col.Item().Text($"{data.CityName}, {data.State}, {data.Country} | Data Year: {data.AIDataYear}")
+                        col.Item().Text($"{data.CityName}, {data.AdministrativeDivision}, {data.Country} | Data Year: {data.AIDataYear}")
                             .FontSize(10)
                             .FontColor("#E8F3F0");
 

@@ -211,7 +211,7 @@ namespace AfricaUrbanObservatory.Services
                     {
                         CityID = c.CityID,
                         CityName = c.CityName,
-                        State = c.State,
+                        AdministrativeDivision = c.AdministrativeDivision,
                         Region = c.Region,
                         PostalCode = c.PostalCode,
                         Country = c.Country,
@@ -226,7 +226,7 @@ namespace AfricaUrbanObservatory.Services
                 if (!string.IsNullOrWhiteSpace(request.SearchText))
                 {
                     string search = request.SearchText.ToLower();
-                    query = query.Where(x => x.CityName.ToLower().Contains(search) || x.State.ToLower().Contains(search));
+                    query = query.Where(x => x.CityName.ToLower().Contains(search) || x.AdministrativeDivision.ToLower().Contains(search));
                 }
 
                 // ✅ Apply ordering and pagination
@@ -692,7 +692,7 @@ namespace AfricaUrbanObservatory.Services
                     {
                         CityID = c.City.CityID,
                         CityName = c.City.CityName,
-                        State = c.City.State,
+                        AdministrativeDivision = c.City.AdministrativeDivision,
                         PostalCode = c.City.PostalCode,
                         Region = c.City.Region,
                         Country = c.City.Country,
@@ -1061,7 +1061,7 @@ namespace AfricaUrbanObservatory.Services
                         PillarScoreID = x.score?.PillarScoreID ?? 0,
                         CityID = x.score?.CityID ?? request.CityID,
                         CityName = x.score?.City?.CityName ?? "",
-                        State = x.score?.City?.State ?? "",
+                        AdministrativeDivision = x.score?.City?.AdministrativeDivision ?? "",
                         Country = x.score?.City?.Country ?? "",
                         PillarID = x.pillar.PillarID,
                         PillarName = x.pillar.PillarName,

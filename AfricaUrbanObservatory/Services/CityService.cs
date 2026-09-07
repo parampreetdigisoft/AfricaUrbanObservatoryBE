@@ -74,7 +74,7 @@ namespace AfricaUrbanObservatory.Services
                 }
                 if(q.CityID > 0)
                 {
-                    var existCity = await _context.Cities.FirstOrDefaultAsync(x => x.IsActive && !x.IsDeleted && q.CityName == x.CityName && x.State == q.State && x.CityID != q.CityID);
+                    var existCity = await _context.Cities.FirstOrDefaultAsync(x => x.IsActive && !x.IsDeleted && q.CityName == x.CityName && x.AdministrativeDivision == q.AdministrativeDivision && x.CityID != q.CityID);
                     if (existCity != null)
                     {
                         return ResultResponseDto<string>.Failure(new string[] { "City already exists" });
@@ -85,7 +85,7 @@ namespace AfricaUrbanObservatory.Services
                     existing.CityName = q.CityName;
                     existing.UpdatedDate = DateTime.Now;
                     existing.Region = q.Region;
-                    existing.State = q.State;
+                    existing.AdministrativeDivision = q.AdministrativeDivision;
                     existing.PostalCode = q.PostalCode;
                     if (!string.IsNullOrEmpty(image))
                     {
@@ -185,7 +185,7 @@ namespace AfricaUrbanObservatory.Services
                         Country = c.Country,
                         PostalCode = c.PostalCode,
                         CityName = c.CityName.Trim().ToLower(),
-                        State = c.State.Trim().ToLower(),
+                        AdministrativeDivision = c.AdministrativeDivision.Trim().ToLower(),
                         Region = c.Region?.Trim(),
                         Longitude = c.Longitude,
                         Latitude = c.Latitude,
@@ -196,7 +196,7 @@ namespace AfricaUrbanObservatory.Services
                         CityAliasName = c.CityAliasName,
                         PeerCities = c.PeerCities
                     })
-                    .GroupBy(c => new { c.CityName, c.State }) 
+                    .GroupBy(c => new { c.CityName, c.AdministrativeDivision }) 
                     .Select(g => g.First())
                     .ToList();
 
@@ -206,22 +206,22 @@ namespace AfricaUrbanObservatory.Services
                     .Select(x => new
                     {
                         CityName = x.CityName.ToLower(),
-                        State = x.State.ToLower()
+                        AdministrativeDivision = x.AdministrativeDivision.ToLower()
                     })
                     .ToListAsync();
 
                 var existingSet = new HashSet<string>(
-                    existingCities.Select(x => $"{x.CityName}_{x.State}")
+                    existingCities.Select(x => $"{x.CityName}_{x.AdministrativeDivision}")
                 );
 
                 // ✅ Filter new cities
                 var newCities = inputCities
-                    .Where(c => !existingSet.Contains($"{c.CityName}_{c.State}"))
+                    .Where(c => !existingSet.Contains($"{c.CityName}_{c.AdministrativeDivision}"))
                     .ToList();
 
                 var existingCityNames = inputCities
-                    .Where(c => existingSet.Contains($"{c.CityName}_{c.State}"))
-                    .Select(c => $"{c.CityName}, {c.State}")
+                    .Where(c => existingSet.Contains($"{c.CityName}_{c.AdministrativeDivision}"))
+                    .Select(c => $"{c.CityName}, {c.AdministrativeDivision}")
                     .ToList();
 
                 // ✅ Create city entities
@@ -229,7 +229,7 @@ namespace AfricaUrbanObservatory.Services
                 {
                     Country = cityDto.Country,
                     CityName = cityDto.CityName,
-                    State = cityDto.State,
+                    AdministrativeDivision = cityDto.AdministrativeDivision,
                     Region = cityDto.Region,
                     CreatedDate = DateTime.UtcNow,
                     PostalCode = cityDto.PostalCode,
@@ -348,7 +348,7 @@ namespace AfricaUrbanObservatory.Services
 
             try
             {
-                var existCity = await _context.Cities.FirstOrDefaultAsync(x => x.IsActive && !x.IsDeleted && q.CityName == x.CityName && x.State == q.State && x.CityID != id);
+                var existCity = await _context.Cities.FirstOrDefaultAsync(x => x.IsActive && !x.IsDeleted && q.CityName == x.CityName && x.AdministrativeDivision == q.AdministrativeDivision && x.CityID != id);
                 if (existCity != null)
                 {
                     return ResultResponseDto<City>.Failure(new string[] { "City already exists" });
@@ -358,7 +358,7 @@ namespace AfricaUrbanObservatory.Services
                 existing.CityName = q.CityName;
                 existing.UpdatedDate = DateTime.Now;
                 existing.Region = q.Region;
-                existing.State = q.State;
+                existing.AdministrativeDivision = q.AdministrativeDivision;
                 existing.CityAliasName = q.CityAliasName;
                 _context.Cities.Update(existing);
                 await _context.SaveChangesAsync();
@@ -389,7 +389,7 @@ namespace AfricaUrbanObservatory.Services
                     string search = request.SearchText.Trim();
                     query = query.Where(x =>
                         x.CityName.Contains(search) ||
-                        x.State.Contains(search));
+                        x.AdministrativeDivision.Contains(search));
                 }
 
                 // 📄 Pagination (DB level)
@@ -422,7 +422,7 @@ namespace AfricaUrbanObservatory.Services
                 {
                     CityID = c.CityID,
                     CityName = c.CityName,
-                    State = c.State,
+                    AdministrativeDivision = c.AdministrativeDivision,
                     PostalCode = c.PostalCode,
                     Region = c.Region,
                     Country = c.Country,
@@ -464,7 +464,7 @@ namespace AfricaUrbanObservatory.Services
                 select new UserCityMappingResponseDto
                 {
                     CityID = c.CityID,
-                    State = c.State,
+                    AdministrativeDivision = c.AdministrativeDivision,
                     CityName = c.CityName,
                     Country = c.Country,
                     PostalCode = c.PostalCode,
@@ -704,7 +704,7 @@ namespace AfricaUrbanObservatory.Services
                      select new UserCityMappingResponseDto
                      {
                          CityID = c.CityID,
-                         State = c.State,
+                         AdministrativeDivision = c.AdministrativeDivision,
                          CityName = c.CityName,
                          PostalCode = c.PostalCode,
                          Region = c.Region,
@@ -922,7 +922,7 @@ namespace AfricaUrbanObservatory.Services
                     select new UserCityMappingResponseDto
                     {
                         CityID = c.CityID,
-                        State = c.State,
+                        AdministrativeDivision = c.AdministrativeDivision,
                         CityName = c.CityName,
                         PostalCode = c.PostalCode,
                         Region = c.Region,
@@ -1006,7 +1006,7 @@ namespace AfricaUrbanObservatory.Services
                     select new UserCityMappingResponseDto
                     {
                         CityID = c.CityID,
-                        State = c.State,
+                        AdministrativeDivision = c.AdministrativeDivision,
                         CityName = c.CityName,
                         PostalCode = c.PostalCode,
                         Region = c.Region,
@@ -1040,13 +1040,13 @@ namespace AfricaUrbanObservatory.Services
                 var cities = await _commonService.GetCitiesProgressForAdmin(userId, (int)userRole, year);
                 
                 if(cities == null) return ResultResponseDto<byte[]>.Failure(new string[] { "There is an error please try later" });
-                IEnumerable<IGrouping<(int CityID, string CityName, string State, string Country), GetCitiesProgressAdminDto>>
+                IEnumerable<IGrouping<(int CityID, string CityName, string AdministrativeDivision, string Country), GetCitiesProgressAdminDto>>
                 result =
                     cities.Where(x=> request.CityIDs==null  || request.CityIDs.Count==0 || request.CityIDs.Contains(x.CityID) || request.IsAllCity==true)
                     .GroupBy(x => (
                         x.CityID,
                         x.CityName,
-                        x.State,
+                        x.AdministrativeDivision,
                         x.Country
                     )).OrderByDescending(x=> x.Sum(y=>y.PillarProgress)/ (decimal)pillarCount);
 
@@ -1063,7 +1063,7 @@ namespace AfricaUrbanObservatory.Services
 
         private byte[] MakeCityPillarSheet(
             ExportCityWithOptionDto request,
-            IEnumerable<IGrouping<(int CityID, string CityName, string State, string Country), GetCitiesProgressAdminDto>> cityGroups)
+            IEnumerable<IGrouping<(int CityID, string CityName, string AdministrativeDivision, string Country), GetCitiesProgressAdminDto>> cityGroups)
         {
             var pillarCount = _appSettings.PillarCount;
             using var workbook = new XLWorkbook();
@@ -1089,7 +1089,7 @@ namespace AfricaUrbanObservatory.Services
             // ---------------- Column Header ----------------
             ws.Cell(row, 1).Value = "S.No.";
             ws.Cell(row, 2).Value = "City Name";
-            ws.Cell(row, 3).Value = "State";
+            ws.Cell(row, 3).Value = "AdministrativeDivision";
             ws.Cell(row, 4).Value = "Country";
 
             if (isRanking)
@@ -1129,7 +1129,7 @@ namespace AfricaUrbanObservatory.Services
                 {
                     ws.Cell(row, 1).Value = sno++;
                     ws.Cell(row, 2).Value = cityData.CityName;
-                    ws.Cell(row, 3).Value = cityData.State;
+                    ws.Cell(row, 3).Value = cityData.AdministrativeDivision;
                     ws.Cell(row, 4).Value = cityData.Country;
                     ws.Cell(row, 5).Value = $"{cityProgress:F2}% - {cityData.AICityProgress:F2}%";
 
@@ -1147,7 +1147,7 @@ namespace AfricaUrbanObservatory.Services
                 {
                     ws.Cell(row, 1).Value = sno++;
                     ws.Cell(row, 2).Value = cityData.CityName;
-                    ws.Cell(row, 3).Value = cityData.State;
+                    ws.Cell(row, 3).Value = cityData.AdministrativeDivision;
                     ws.Cell(row, 4).Value = cityData.Country;
 
                     ws.Cell(row, 5).Value = pillar.PillarName;

@@ -91,7 +91,7 @@ namespace AfricaUrbanObservatory.Services
                               CityID = c.CityID,
                               CityName = c.CityName,
                               Region = c.Region,
-                              State = c.State
+                              AdministrativeDivision = c.AdministrativeDivision
                           }
                       })
                 .ToListAsync();
@@ -187,7 +187,7 @@ namespace AfricaUrbanObservatory.Services
                     CreatedAt = a != null ? a.CreatedAt : null,
                     CityID = c.CityID,
                     CityName = c.CityName,
-                    State = c.State,
+                    AdministrativeDivision = c.AdministrativeDivision,
                     UserID = u.UserID,
                     UserName = u.FullName,
                     Score = a != null

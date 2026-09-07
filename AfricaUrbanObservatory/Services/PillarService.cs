@@ -344,7 +344,7 @@ namespace AfricaUrbanObservatory.Services
                                             .Bold()
                                             .FontColor("#ffffff");
 
-                                        left.Item().Text($"{city?.CityName}, {city?.State}, USA | Data Year: {year}")
+                                        left.Item().Text($"{city?.CityName}, {city?.AdministrativeDivision}, USA | Data Year: {year}")
                                             .FontSize(10)
                                             .FontColor("#cfe7df");
 
@@ -457,7 +457,7 @@ namespace AfricaUrbanObservatory.Services
         {
             using (var workbook = new XLWorkbook())
             {
-                var name = city == null ? $"{pillars.Count}-Pillars-Result" : city?.CityName+"-"+city?.State+ $"-{pillars.Count}-Pillars-Result";
+                var name = city == null ? $"{pillars.Count}-Pillars-Result" : city?.CityName+"-"+city?.AdministrativeDivision+ $"-{pillars.Count}-Pillars-Result";
                 var shortName = name.Length > 30 ? name.Substring(0, 30) : name;
 
                 var ws = workbook.Worksheets.Add(shortName);

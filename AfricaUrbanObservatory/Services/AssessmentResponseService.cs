@@ -293,7 +293,7 @@ namespace AfricaUrbanObservatory.Services
 
                         CityID = c.CityID,
                         CityName = c.CityName,
-                        State = c.State,
+                        AdministrativeDivision = c.AdministrativeDivision,
 
                         UserID = u.UserID,
                         UserName = u.FullName,

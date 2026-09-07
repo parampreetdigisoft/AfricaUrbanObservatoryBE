@@ -62,7 +62,7 @@ namespace AfricaUrbanObservatory.Services
                                 UnitAmount = request.Amount * 100,
                                 ProductData = new SessionLineItemPriceDataProductDataOptions
                                 {
-                                    Name = "Africa Urban Observatory Payment Please don't close the window after clicking on pay button",
+                                    Name = "African Urban Index Payment Please don't close the window after clicking on pay button",
                                     Metadata = new Dictionary<string, string>
                                     {
                                         {request.Tier.ToString(), $"Provide {request.Tier.ToString()} Paid subsciption" }

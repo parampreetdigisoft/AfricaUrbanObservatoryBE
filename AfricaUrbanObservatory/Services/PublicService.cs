@@ -42,7 +42,7 @@ namespace AfricaUrbanObservatory.Services
                  Select(c => new PartnerCityResponseDto
                  {
                      CityID = c.CityID,
-                     State = c.State,
+                     AdministrativeDivision = c.AdministrativeDivision,
                      CityName = c.CityName,
                      PostalCode = c.PostalCode,
                      Region = c.Region,
@@ -151,7 +151,7 @@ namespace AfricaUrbanObservatory.Services
                        c.Country,
                        c.PostalCode,
                        c.Image,
-                       c.State,
+                       c.AdministrativeDivision,
                        c.CityName,
                        c.Region,
                        EvaluatorCount = _context.UserCityMappings
@@ -161,7 +161,7 @@ namespace AfricaUrbanObservatory.Services
                    select new PartnerCityResponseDto
                    {
                        CityID = g.Key.CityID,
-                       State = g.Key.State,
+                       AdministrativeDivision = g.Key.AdministrativeDivision,
                        CityName = g.Key.CityName,
                        PostalCode = g.Key.PostalCode,
                        Region = g.Key.Region,
@@ -271,7 +271,7 @@ namespace AfricaUrbanObservatory.Services
                                 CityID = c.CityID,
                                 CityName = c.City.CityName,
                                 Country = c.City.Country,
-                                State = c.City.State,
+                                AdministrativeDivision = c.City.AdministrativeDivision,
                                 PostalCode = c.City.PostalCode,
                                 Region = c.City.Region,
                                 Image = c.City.Image,

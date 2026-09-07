@@ -97,14 +97,14 @@ namespace AfricaUrbanObservatory.Services
                     var url = user.Role != UserRole.CityUser ? _appSettings.ApplicationUrl : _appSettings.PublicApplicationUrl;
                     string passwordResetLink = url + "/auth/reset-password?PasswordToken=" + token;
 
-                    var sub = "Password Update Link – Africa Urban Observatory Platform";
+                    var sub = "Password Update Link – African Urban Index Platform";
                     var model = new EmailInvitationSendRequestDto
                     {
                         ResetPasswordUrl = passwordResetLink,
                         Title = sub,
                         ApiUrl = _appSettings.ApiUrl,
                         ApplicationUrl = url,
-                        MsgText= "A request was made to update the password for your Africa Urban Observatory (VUI) account. To proceed, please use the secure link below:",
+                        MsgText= "A request was made to update the password for your African Urban Index (AUI) account. To proceed, please use the secure link below:",
                         IsShowBtnText=true,
                         IsLoginBtn=false,
                         BtnText= "Update Password",
@@ -281,7 +281,7 @@ namespace AfricaUrbanObservatory.Services
                 var hash = BCrypt.Net.BCrypt.HashPassword(inviteUser.Email);
                 var passwordToken = hash;
                 var token = passwordToken.Replace("+", " ");
-                string sub = $"{inviteUser.Role.ToString()} Access Granted – Africa Urban Observatory Platform";
+                string sub = $"{inviteUser.Role.ToString()} Access Granted – African Urban Index Platform";
                 var url = _appSettings.ApplicationUrl; 
                 string passwordResetLink = url + "/auth/reset-password?PasswordToken=" + token;
 
@@ -446,7 +446,7 @@ namespace AfricaUrbanObservatory.Services
                     var hash = BCrypt.Net.BCrypt.HashPassword(inviteUser.Email);
                     var passwordToken = hash;
                     var token = passwordToken.Replace("+", " ");
-                    string sub = $"{inviteUser.Role.ToString()} Access Granted – Africa Urban Observatory Platform";
+                    string sub = $"{inviteUser.Role.ToString()} Access Granted – African Urban Index Platform";
                     var url = user.Role != UserRole.CityUser ? _appSettings.ApplicationUrl : _appSettings.PublicApplicationUrl;
                     string passwordResetLink = url + "/auth/reset-password?PasswordToken=" + token;
 
@@ -612,7 +612,7 @@ namespace AfricaUrbanObservatory.Services
                          .Select(c => c.CityName));
                         var invitedUser = _context.Users.FirstOrDefault(x => x.UserID == inviteUser.InvitedUserID);
 
-                        string sub = $"{inviteUser.Role.ToString()} Access Granted – Africa Urban Observatory Platform";
+                        string sub = $"{inviteUser.Role.ToString()} Access Granted – African Urban Index Platform";
                         var model = new EmailInvitationSendRequestDto
                         {
                             ResetPasswordUrl = resetLink,
@@ -903,7 +903,7 @@ namespace AfricaUrbanObservatory.Services
                     IsLoginBtn = false,
                     IsShowBtnText = false,
                     Mail = _appSettings.AdminMail,
-                    DescriptionAboutBtnText = "You are receiving this email because a login attempt was made to your VUI account. " +
+                    DescriptionAboutBtnText = "You are receiving this email because a login attempt was made to your AUI account. " +
                                "If this was you, please use the above OTP to complete your sign-in. " +
                                "If you did not request this login, please secure your account immediately by resetting your password."
                 };
@@ -1031,7 +1031,7 @@ namespace AfricaUrbanObservatory.Services
                         Title = "Verify Your Email",
                         ApiUrl = _appSettings.ApiUrl,
                         ApplicationUrl = url,
-                        MsgText = "A request was made to update the Email for your Africa Urban Observatory (VUI) account. Please verify your email and reset your password.",
+                        MsgText = "A request was made to update the Email for your African Urban Index (AUI) account. Please verify your email and reset your password.",
                         Mail = _appSettings.AdminMail,
                         BtnText = "Verify",
                         DescriptionAboutBtnText = "Please verify your email address by clicking the button above."

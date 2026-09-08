@@ -254,7 +254,7 @@ namespace AfricaUrbanObservatory.Common.Implementation
             List<KpiChartItem> kpis)
         {
             float overall = (float)city.AIProgress.GetValueOrDefault();
-            var validPillars = pillars.Where(p => p.Value.HasValue).ToList();
+            var validPillars = pillars.Where(p => p.Value.HasValue).OrderByDescending(x=>x.Value).ToList();
             // ── Call site ────────────────────────────────────────────────────────────────
             var donutPng = RenderPng((c, s) => PaintDonut(c, s, overall), 320, 220);
             var radarPng = RenderPng((c, s) => PaintSpiderChart(c, s, validPillars), 460, 280);
@@ -876,11 +876,11 @@ namespace AfricaUrbanObservatory.Common.Implementation
             Body body, MainDocumentPart mainPart,
             List<PillarChartItem> pillars)
         {
-            var data = pillars.Where(p => p.Value.HasValue).Take(14).ToList();
+            var data = pillars.Where(p => p.Value.HasValue).OrderByDescending(x => x.Value).ToList();
             if (!data.Any()) return;
 
             var radialPng = RenderPng((c, s) => PaintPillarRadialChart(c, s, data), 340, 340);
-            var barPng    = RenderPng((c, s) => PaintPillarHorizontalBars(c, s, data), 400, 340);
+            var barPng = RenderPng((c, s) => PaintPillarHorizontalBars(c, s, data), 400, 340);
             body.AppendChild(CreateSideBySideImages(mainPart, radialPng, barPng, 340));
             body.AppendChild(Gap(160));
             body.AppendChild(CreatePillarFooterTable(data));
@@ -965,6 +965,7 @@ namespace AfricaUrbanObservatory.Common.Implementation
 
             // Groups of 18 KPIs — bar chart + interpretation cards
             var groups = kpis
+                .OrderByDescending(x=>x.Value)
                 .Select((k, i) => new { k, i })
                 .GroupBy(x => x.i / 18)
                 .Select(g => g.Select(x => x.k).ToList())

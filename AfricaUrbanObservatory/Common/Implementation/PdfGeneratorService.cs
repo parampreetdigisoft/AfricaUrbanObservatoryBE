@@ -109,7 +109,7 @@ namespace AfricaUrbanObservatory.Common.Implementation
         public void AddCityDetailsPdf(IDocumentContainer container, AiCitySummeryDto cityDetails, List<AiCityPillarReponse> pillars, List<KpiChartItem> kpis,
             List<PeerCityHistoryReportDto> peerCities, UserRole userRole, bool isAllCities = false)
         {
-            var kpiChartItems = kpis.ToList();
+            var kpiChartItems = kpis.OrderByDescending(x => x.Value).ToList();
            cityDetails = SanitizeCitySummary(cityDetails);
            SanitizePillars(pillars);            
             // Build pillar chart items (max 14)
@@ -374,7 +374,7 @@ namespace AfricaUrbanObservatory.Common.Implementation
             List<KpiChartItem> kpis,      // already filtered to max 107
             UserRole userRole)
         {
-            var vPillars = pillars.Where(p => p.Value.HasValue).ToList();
+            var vPillars = pillars.Where(p => p.Value.HasValue).OrderByDescending(x => x.Value).ToList();
             //var vKpis = kpis.Where(k => k.Value.HasValue).ToList();
 
             doc.Page(page =>
@@ -1473,7 +1473,7 @@ namespace AfricaUrbanObservatory.Common.Implementation
 
         void PillarLineChartPage(IContainer container, List<PillarChartItem> pillars)
         {
-            var data = pillars.Where(p => p.Value.HasValue).Take(14).ToList();
+            var data = pillars.Where(p => p.Value.HasValue).OrderByDescending(x => x.Value).ToList();
             if (!data.Any()) return;
 
             float avg = (float)data.Average(x => x.Value ?? 0);
@@ -1637,7 +1637,7 @@ namespace AfricaUrbanObservatory.Common.Implementation
 
         void DrawPillarsRadialChart(IContainer container, List<PillarChartItem> pillars)
         {
-            var data = pillars.Where(p => p.Value.HasValue).Take(14).ToList();
+            var data = pillars.Where(p => p.Value.HasValue).OrderByDescending(x => x.Value).ToList();
             if (!data.Any()) return;
 
             float avg = (float)data.Average(x => x.Value ?? 0);

@@ -1,5 +1,6 @@
 
 using AfricaUrbanObservatory.Dtos.CityDto;
+using AfricaUrbanObservatory.Dtos.EmailExistDto;
 using AfricaUrbanObservatory.Dtos.UserDtos;
 using AfricaUrbanObservatory.IServices;
 using Microsoft.AspNetCore.Authorization;
@@ -98,6 +99,15 @@ namespace AfricaUrbanObservatory.Controllers
             if (response == null)
                 return StatusCode(500, "User Invitation failed due to a server error.");
 
+            return Ok(response);
+        }
+
+        [HttpPost]
+        [Route("CheckEmailExist")]
+        [Authorize]
+        public async Task<IActionResult> CheckEmailExist([FromBody] EmailExistRequestDto request)
+        {
+            var response = await _authService.CheckEmailExist(request);
             return Ok(response);
         }
 

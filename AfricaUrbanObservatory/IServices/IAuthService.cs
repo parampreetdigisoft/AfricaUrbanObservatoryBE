@@ -1,5 +1,6 @@
 ﻿using AfricaUrbanObservatory.Common.Models;
 using AfricaUrbanObservatory.Dtos.CityDto;
+using AfricaUrbanObservatory.Dtos.EmailExistDto;
 using AfricaUrbanObservatory.Dtos.UserDtos;
 using AfricaUrbanObservatory.Models;
 
@@ -17,6 +18,7 @@ namespace AfricaUrbanObservatory.IServices
         Task<ResultResponseDto<object>> InviteUser(InviteUserDto inviteUser);
         Task<ResultResponseDto<object>> InviteBulkUser(InviteBulkUserDto inviteUser);
         Task<ResultResponseDto<object>> UpdateInviteUser(UpdateInviteUserDto inviteUser);
+        Task<ResultResponseDto<object>> CheckEmailExist(EmailExistRequestDto request);
         Task<ResultResponseDto<object>> DeleteUser(int userId);
         Task<ResultResponseDto<UserResponseDto>> RefreshToken(int userId);
         Task<ResultResponseDto<string>> SendMailForEditAssessment(SendRequestMailToUpdateCity request);

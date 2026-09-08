@@ -317,7 +317,7 @@ namespace AfricaUrbanObservatory.Services
         {
             var logoPath = Path.Combine(
                 Directory.GetCurrentDirectory(),
-                "wwwroot/assets/images/veridian-urban-index.png");
+                "wwwroot/assets/images/afican-urban-index.png");
 
             return Document.Create(container =>
             {

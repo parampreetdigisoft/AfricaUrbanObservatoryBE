@@ -2,8 +2,8 @@
 {
     public class AddCityUserKpisCityAndPillar
     {
-        public List<int> Cities { get; set; }
-        public List<int> Pillars { get; set; }
-        //public List<int> Kpis { get; set; }
+        public List<int> Cities { get; set; } = new();
+        public List<int> Pillars { get; set; } = new();
+        public bool IsAllCities { get; set; }
     }
 }

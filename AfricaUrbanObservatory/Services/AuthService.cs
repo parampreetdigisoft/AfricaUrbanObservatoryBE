@@ -3,7 +3,10 @@ using AfricaUrbanObservatory.Common.Models;
 using AfricaUrbanObservatory.Common.Models.settings;
 using AfricaUrbanObservatory.Data;
 using AfricaUrbanObservatory.Dtos.CityDto;
+using AfricaUrbanObservatory.Dtos.CityUserDto;
+using AfricaUrbanObservatory.Dtos.EmailExistDto;
 using AfricaUrbanObservatory.Dtos.UserDtos;
+using AfricaUrbanObservatory.Enums;
 using AfricaUrbanObservatory.IServices;
 using AfricaUrbanObservatory.Models;
 using AfricaUrbanObservatory.Views.EmailModels;
@@ -247,7 +250,7 @@ namespace AfricaUrbanObservatory.Services
                 TokenExpirationDate = tokenExpired,
                 ProfileImagePath = user.ProfileImagePath,
                 Token = token,
-                tier = user.Tier
+                Tier = user.Tier
             };
             return ResultResponseDto<UserResponseDto>.Success(response, new string[] { "You have successfully logged in." });
         }
@@ -278,17 +281,19 @@ namespace AfricaUrbanObservatory.Services
                     return ResultResponseDto<object>.Failure(new string[] { "User already have different role" });
                 }
 
+                if (inviteUser.Role == UserRole.CityUser)
+                {
+                    user.Tier = inviteUser.Tier ?? Enums.TieredAccessPlan.Pending;
+                }
+
                 var hash = BCrypt.Net.BCrypt.HashPassword(inviteUser.Email);
                 var passwordToken = hash;
                 var token = passwordToken.Replace("+", " ");
-                string sub = $"{inviteUser.Role.ToString()} Access Granted – African Urban Index Platform";
-                var url = _appSettings.ApplicationUrl; 
+                string roleName = inviteUser.Role == UserRole.CityUser ? "City User" : inviteUser.Role.ToString();
+                string sub = $"{roleName} Access Granted – African Urban Index Platform";
+                var url = inviteUser.Role == UserRole.CityUser ? _appSettings.PublicApplicationUrl : _appSettings.ApplicationUrl;
                 string passwordResetLink = url + "/auth/reset-password?PasswordToken=" + token;
 
-                var cityName = string.Join(", ",
-                                         _context.Cities
-                                         .Where(c => inviteUser.CityID.Contains(c.CityID))
-                                         .Select(c => c.CityName));
                 var invitedUser = _context.Users.FirstOrDefault(x => x.UserID == inviteUser.InvitedUserID);
 
                 var model = new EmailInvitationSendRequestDto
@@ -299,7 +304,13 @@ namespace AfricaUrbanObservatory.Services
                     ApplicationUrl = url,
                     Mail= _appSettings.AdminMail
                 };
-                var viewNamePath = inviteUser.Role ==UserRole.Analyst ? "~/Views/EmailTemplates/AnalystSendInvitation.cshtml" : "~/Views/EmailTemplates/EvaluatorSendInvitation.cshtml";
+                var viewNamePath = inviteUser.Role switch
+                {
+                    UserRole.Analyst => "~/Views/EmailTemplates/AnalystSendInvitation.cshtml",
+                    UserRole.Evaluator => "~/Views/EmailTemplates/EvaluatorSendInvitation.cshtml",
+                    UserRole.CityUser => "~/Views/EmailTemplates/CityUserSendInvitation.cshtml",
+                    _ => "~/Views/EmailTemplates/EvaluatorSendInvitation.cshtml"
+                };
 
                 var isMailSent = await _emailService.SendEmailAsync(inviteUser.Email, sub, viewNamePath, model);
                 user.ResetToken = token;
@@ -307,18 +318,40 @@ namespace AfricaUrbanObservatory.Services
                 user.IsDeleted = false;
                 _context.Users.Update(user);
 
-                foreach (var id in inviteUser.CityID)
+                if (inviteUser.Role != UserRole.CityUser)
                 {
-                    var mapping = new UserCityMapping
+                    foreach (var id in inviteUser.CityID)
                     {
-                        UserID = user.UserID,
-                        CityID = id,
-                        AssignedByUserId = inviteUser.InvitedUserID,
-                        Role = user.Role
-                    };
-                    _context.UserCityMappings.Add(mapping);
+                        var mapping = new UserCityMapping
+                        {
+                            UserID = user.UserID,
+                            CityID = id,
+                            AssignedByUserId = inviteUser.InvitedUserID,
+                            Role = user.Role
+                        };
+                        _context.UserCityMappings.Add(mapping);
+                    }
                 }
                 await _context.SaveChangesAsync();
+
+                if (inviteUser.Role == UserRole.CityUser)
+                {
+                    string tierName = inviteUser.Tier?.ToString();
+                    var kpiPayload = new AddCityUserKpisCityAndPillar
+                    {
+                        Cities = inviteUser.IsAllCities ? new List<int>() : (inviteUser.CityID ?? new List<int>()),
+                        Pillars = inviteUser.Pillars ?? new List<int>(),
+                        IsAllCities = inviteUser.IsAllCities
+                    };
+                    var response = await AddCityUserKpisCityAndPillar(kpiPayload, user.UserID, tierName);
+                    if (!response.Succeeded)
+                    {
+                        return ResultResponseDto<object>.Failure(
+                            response.Messages?.Length > 0
+                                ? response.Messages
+                                : (response.Errors?.Length > 0 ? response.Errors : new string[] { "There is an error please try later" }));
+                    }
+                }
 
                 if (isMailSent)
                 {
@@ -348,105 +381,133 @@ namespace AfricaUrbanObservatory.Services
             try
             {
                 if (inviteUser == null || string.IsNullOrEmpty(inviteUser.Email) || string.IsNullOrEmpty(inviteUser.FullName))
-                {
-                    return ResultResponseDto<object>.Failure(new string[] { "Invalid request data." });
-                }
-                var userList = await _context.Users.Where(u => u.UserID == inviteUser.UserID || u.UserID == inviteUser.InvitedUserID).ToListAsync();
+                    return ResultResponseDto<object>.Failure(new[] { "Invalid request data." });
+
+                var userList = await _context.Users
+                    .Where(u => u.UserID == inviteUser.UserID || u.UserID == inviteUser.InvitedUserID)
+                    .ToListAsync();
 
                 var user = userList.FirstOrDefault(u => u.UserID == inviteUser.UserID);
                 if (user == null)
-                {
-                    return ResultResponseDto<object>.Failure(new string[] { "User not found." });
-                }
-                if (user.Role != inviteUser.Role)
-                {
-                    return ResultResponseDto<object>.Failure(new string[] { "User already have different role" });
-                }
+                    return ResultResponseDto<object>.Failure(new[] { "User not found." });
 
+                if (user.Role != inviteUser.Role)
+                    return ResultResponseDto<object>.Failure(new[] { "User already have different role" });
 
                 user.FullName = inviteUser.FullName;
                 user.Phone = inviteUser.Phone;
                 user.CreatedBy = inviteUser.InvitedUserID;
+                user.Email = inviteUser.Email;
+                if (inviteUser.Role == UserRole.CityUser)
+                {
+                    user.Tier = inviteUser.Tier;
+                }
                 _context.Users.Update(user);
 
-                var existingMappings = _context.UserCityMappings
-                    .Where(m => m.UserID == user.UserID && m.AssignedByUserId == inviteUser.InvitedUserID && !m.IsDeleted)
-                    .ToList();
+                var (citiesToAdd, citiesToDelete) = await GetCityMappingChangesAsync(
+                    user.UserID,
+                    inviteUser.InvitedUserID,
+                    inviteUser.Role,
+                    inviteUser.CityID ?? new List<int>()
+                );
 
-                var existingCityIds = existingMappings.Select(m => m.CityID).ToList();
-
-                var newCityIds = inviteUser.CityID;
-
-                // Add missing cities
-                var citiesToAdd = newCityIds.Except(existingCityIds).ToList();
-                foreach (var cityId in citiesToAdd)
+                if (inviteUser.Role == UserRole.CityUser)
                 {
-                    var newMapping = new UserCityMapping
+                    if (inviteUser.Tier == TieredAccessPlan.Premium)
+                    {
+                        var allPillarIds = await _context.Pillars.Select(p => p.PillarID).ToListAsync();
+                        inviteUser.Pillars = allPillarIds;
+
+                        if (inviteUser.IsAllCities)
+                        {
+                            inviteUser.CityID = await _context.Cities
+                                .Where(c => c.IsActive)
+                                .Select(c => c.CityID)
+                                .ToListAsync();
+                        }
+                        else if (inviteUser.CityID == null || inviteUser.CityID.Count < 1)
+                        {
+                            return ResultResponseDto<object>.Failure(new[]
+                            {
+                                "Premium plan requires at least one city, or all cities."
+                            });
+                        }
+
+                        (citiesToAdd, citiesToDelete) = await GetCityMappingChangesAsync(
+                            user.UserID,
+                            inviteUser.InvitedUserID,
+                            inviteUser.Role,
+                            inviteUser.CityID
+                        );
+                    }
+
+                    var existingCities = await _context.PublicUserCityMappings
+                        .Where(m => m.UserID == user.UserID)
+                        .ToListAsync();
+                    var citiesToRemove = existingCities.Where(c => citiesToDelete.Contains(c.CityID)).ToList();
+                    _context.PublicUserCityMappings.RemoveRange(citiesToRemove);
+
+                    var utcNow = DateTime.UtcNow;
+                    var newCities = citiesToAdd.Select(c => new PublicUserCityMapping
                     {
                         UserID = user.UserID,
-                        CityID = cityId,
+                        CityID = c,
+                        IsActive = true,
+                        UpdatedAt = utcNow
+                    });
+                    await _context.PublicUserCityMappings.AddRangeAsync(newCities);
+
+                    if (inviteUser.Pillars != null)
+                    {
+                        var existingPillars = await _context.CityUserPillarMappings
+                            .Where(m => m.UserID == user.UserID)
+                            .ToListAsync();
+                        _context.CityUserPillarMappings.RemoveRange(existingPillars);
+
+                        var newPillars = inviteUser.Pillars.Select(p => new CityUserPillarMapping
+                        {
+                            UserID = user.UserID,
+                            PillarID = p,
+                            IsActive = true,
+                            UpdatedAt = utcNow
+                        });
+                        await _context.CityUserPillarMappings.AddRangeAsync(newPillars);
+                    }
+                }
+                else
+                {
+                    var existingMappings = _context.UserCityMappings
+                        .Where(m => m.UserID == user.UserID && m.AssignedByUserId == inviteUser.InvitedUserID && !m.IsDeleted)
+                        .ToList();
+
+                    var addMappings = citiesToAdd.Select(c => new UserCityMapping
+                    {
+                        UserID = user.UserID,
+                        CityID = c,
                         AssignedByUserId = inviteUser.InvitedUserID,
                         Role = user.Role
-                    };
-                    _context.UserCityMappings.Add(newMapping);
+                    });
+                    _context.UserCityMappings.AddRange(addMappings);
+
+                    var deleteMappings = existingMappings.Where(m => citiesToDelete.Contains(m.CityID)).ToList();
+                    foreach (var m in deleteMappings)
+                    {
+                        m.IsDeleted = true;
+                        _context.UserCityMappings.Update(m);
+                    }
                 }
 
-                //Delete cities no longer in the new list
-                var citiesToDelete = existingMappings
-                    .Where(m => !newCityIds.Contains(m.CityID))
-                    .ToList();
-                foreach (var c in citiesToDelete)
-                {
-                    c.IsDeleted = true;
-                    _context.UserCityMappings.Update(c);
-                }
-
-                // Save all changes
                 await _context.SaveChangesAsync();
 
                 bool isMailSent = false;
-                var msgText = "You are receiving this email because you haven't reset your password";
                 string msg = "User updated successfully";
 
-                var invitedUser = userList.FirstOrDefault(x => x.UserID == inviteUser.InvitedUserID);
-
-                List<int> merged = inviteUser.CityID.Concat(citiesToDelete.Select(x => x.CityID)).ToList();
-
-                var cities = await _context.Cities
-                    .Where(c => merged.Contains(c.CityID))
-                    .ToListAsync();
-
-                if (citiesToAdd.Count > 0)
-                {
-                    isMailSent = true;
-                    var invitedCityNames = string.Join(", ",
-                        cities.Where(c => citiesToAdd.Contains(c.CityID)).Select(c => c.CityName));
-
-                    msgText = $"You are receiving this email because {invitedUser?.FullName} recently requested city assignment ({invitedCityNames}) for your USVI account.";
-                }
-
-                if (citiesToDelete.Count > 0)
-                {
-                    var deleteName = cities
-                    .Where(c => citiesToDelete.Select(x => x.CityID).Contains(c.CityID)).Select(c => c.CityName);
-                    var deleteCityNames = string.Join(", ", deleteName);
-
-                    if (isMailSent)
-                    {
-                        msgText += $" Additionally, you no longer have access to the cities ({deleteCityNames}) for your USVI account.";
-                    }
-                    else
-                    {
-                        msgText = $"You are receiving this email because {invitedUser?.FullName} recently removed your access to the following cities ({deleteCityNames}) for your USVI account.";
-                    }
-                    isMailSent = true;
-                }
-                if (isMailSent || !user.IsEmailConfirmed)
+                if (!user.IsEmailConfirmed)
                 {
                     var hash = BCrypt.Net.BCrypt.HashPassword(inviteUser.Email);
-                    var passwordToken = hash;
-                    var token = passwordToken.Replace("+", " ");
-                    string sub = $"{inviteUser.Role.ToString()} Access Granted – African Urban Index Platform";
+                    var token = hash.Replace("+", " ");
+                    string roleName = inviteUser.Role == UserRole.CityUser ? "City User" : inviteUser.Role.ToString();
+                    string sub = $"{roleName} Access Granted – African Urban Index Platform";
                     var url = user.Role != UserRole.CityUser ? _appSettings.ApplicationUrl : _appSettings.PublicApplicationUrl;
                     string passwordResetLink = url + "/auth/reset-password?PasswordToken=" + token;
 
@@ -458,7 +519,14 @@ namespace AfricaUrbanObservatory.Services
                         Title = sub,
                         Mail = _appSettings.AdminMail
                     };
-                    var viewNamePath = inviteUser.Role == UserRole.Analyst ? "~/Views/EmailTemplates/AnalystSendInvitation.cshtml" : "~/Views/EmailTemplates/EvaluatorSendInvitation.cshtml";
+
+                    var viewNamePath = inviteUser.Role switch
+                    {
+                        UserRole.Analyst => "~/Views/EmailTemplates/AnalystSendInvitation.cshtml",
+                        UserRole.Evaluator => "~/Views/EmailTemplates/EvaluatorSendInvitation.cshtml",
+                        UserRole.CityUser => "~/Views/EmailTemplates/CityUserSendInvitation.cshtml",
+                        _ => "~/Views/EmailTemplates/EvaluatorSendInvitation.cshtml"
+                    };
 
                     isMailSent = await _emailService.SendEmailAsync(inviteUser.Email, sub, viewNamePath, model);
                     user.ResetToken = token;
@@ -469,12 +537,12 @@ namespace AfricaUrbanObservatory.Services
                     await _context.SaveChangesAsync();
                 }
 
-                return ResultResponseDto<object>.Success(new { }, new string[] { msg });
+                return ResultResponseDto<object>.Success(new { }, new[] { msg });
             }
             catch (Exception ex)
             {
                 await _appLogger.LogAsync("Error Occure in UpdateInviteUser", ex);
-                return ResultResponseDto<object>.Failure(new string[] { "There is an error please try later" });
+                return ResultResponseDto<object>.Failure(new[] { "There is an error please try later" });
             }
         }
         public async Task<ResultResponseDto<object>> DeleteUser(int userId)
@@ -495,6 +563,30 @@ namespace AfricaUrbanObservatory.Services
                 {
                     m.IsDeleted = true;
                     _context.UserCityMappings.Update(m);
+                }
+
+                if (user.Role == UserRole.CityUser)
+                {
+                    var utcNow = DateTime.UtcNow;
+                    var publicMappings = await _context.PublicUserCityMappings
+                        .Where(x => x.UserID == userId && x.IsActive)
+                        .ToListAsync();
+                    foreach (var mapping in publicMappings)
+                    {
+                        mapping.IsActive = false;
+                        mapping.UpdatedAt = utcNow;
+                    }
+                    _context.PublicUserCityMappings.UpdateRange(publicMappings);
+
+                    var pillarMappings = await _context.CityUserPillarMappings
+                        .Where(x => x.UserID == userId && x.IsActive)
+                        .ToListAsync();
+                    foreach (var mapping in pillarMappings)
+                    {
+                        mapping.IsActive = false;
+                        mapping.UpdatedAt = utcNow;
+                    }
+                    _context.CityUserPillarMappings.UpdateRange(pillarMappings);
                 }
 
                 await _context.SaveChangesAsync();
@@ -1082,6 +1174,158 @@ namespace AfricaUrbanObservatory.Services
                 await _appLogger.LogAsync("Error Occure UpdateUser", ex);
                 return ResultResponseDto<UpdateUserResponseDto>.Failure(new string[] { "There is an error please try later" });
             }
+        }
+
+        public async Task<ResultResponseDto<object>> CheckEmailExist(EmailExistRequestDto request)
+        {
+            try
+            {
+                var user = _context.Users.FirstOrDefault(u => u.Email == request.Email.Trim() && !u.IsDeleted);
+                bool exists = user != null && user.UserID != request.UserID;
+
+                if (exists)
+                {
+                    return ResultResponseDto<object>.Failure(
+                        new[] { "Email Already Exists" },
+                        isExist: true
+                    );
+                }
+
+                return ResultResponseDto<object>.Success(
+                    messages: new[] { "Email is Valid" }
+                );
+            }
+            catch (Exception ex)
+            {
+                await _appLogger.LogAsync("Error Occured in fetch emails", ex);
+                return ResultResponseDto<object>.Failure(new string[] { "There is an error please try later" });
+            }
+        }
+
+        private async Task<ResultResponseDto<string>> AddCityUserKpisCityAndPillar(AddCityUserKpisCityAndPillar payload, int userId, string tierName)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(tierName))
+                    return ResultResponseDto<string>.Failure(new[] { "Access tier information is missing." });
+
+                if (!Enum.TryParse<TieredAccessPlan>(tierName, true, out var tier))
+                    return ResultResponseDto<string>.Failure(new[] { "Invalid tier access. Please contact support team." });
+
+                var allPillarIds = await _context.Pillars.Select(p => p.PillarID).ToListAsync();
+                var allCityIds = await _context.Cities
+                    .Where(c => c.IsActive)
+                    .Select(c => c.CityID)
+                    .ToListAsync();
+
+                if (tier == TieredAccessPlan.Premium)
+                {
+                    payload.Pillars = allPillarIds;
+
+                    if (payload.IsAllCities)
+                    {
+                        payload.Cities = allCityIds;
+                    }
+                    else if (payload.Cities == null || payload.Cities.Count < 1)
+                    {
+                        return ResultResponseDto<string>.Failure(new[]
+                        {
+                            "Premium plan requires at least one city, or all cities."
+                        });
+                    }
+                }
+                else
+                {
+                    var pillarLimits = tier switch
+                    {
+                        TieredAccessPlan.Basic => new { Min = 1, Max = 7, Name = "Basic" },
+                        TieredAccessPlan.Standard => new { Min = 1, Max = 12, Name = "Standard" },
+                        _ => new { Min = 0, Max = 0, Name = "Unknown" }
+                    };
+
+                    var cityCount = payload.Cities?.Count ?? 0;
+                    var pillarCount = payload.Pillars?.Count ?? 0;
+                    var citiesOk = cityCount >= 1;
+                    var pillarsOk = pillarCount >= pillarLimits.Min && pillarCount <= pillarLimits.Max;
+
+                    if (!citiesOk || !pillarsOk)
+                    {
+                        return ResultResponseDto<string>.Failure(new[]
+                        {
+                            $"Your {pillarLimits.Name} plan requires at least 1 city and between {pillarLimits.Min} and {pillarLimits.Max} pillars."
+                        });
+                    }
+                }
+
+                var existingCities = await _context.PublicUserCityMappings
+                    .Where(m => m.UserID == userId)
+                    .ToListAsync();
+
+                var existingPillars = await _context.CityUserPillarMappings
+                    .Where(m => m.UserID == userId)
+                    .ToListAsync();
+
+                _context.PublicUserCityMappings.RemoveRange(existingCities);
+                _context.CityUserPillarMappings.RemoveRange(existingPillars);
+
+                var utcNow = DateTime.UtcNow;
+
+                var newCityMappings = (payload.Cities ?? new List<int>()).Select(cityId => new PublicUserCityMapping
+                {
+                    CityID = cityId,
+                    UserID = userId,
+                    IsActive = true,
+                    UpdatedAt = utcNow
+                });
+
+                var newPillarMappings = (payload.Pillars ?? new List<int>()).Select(pillarId => new CityUserPillarMapping
+                {
+                    PillarID = pillarId,
+                    UserID = userId,
+                    IsActive = true,
+                    UpdatedAt = utcNow
+                });
+
+                await _context.PublicUserCityMappings.AddRangeAsync(newCityMappings);
+                await _context.CityUserPillarMappings.AddRangeAsync(newPillarMappings);
+
+                await _context.SaveChangesAsync();
+
+                return ResultResponseDto<string>.Success("", new[] { "Your preferences have been saved successfully." });
+            }
+            catch (Exception ex)
+            {
+                await _appLogger.LogAsync("Error occurred in AddCityUserKpisCityAndPillar", ex);
+                return ResultResponseDto<string>.Failure(new[]
+                {
+                    "Something went wrong while saving your selections. Please try again later."
+                });
+            }
+        }
+
+        private async Task<(List<int> citiesToAdd, List<int> citiesToDelete)> GetCityMappingChangesAsync(
+            int userId, int assignedByUserId, UserRole role, List<int> newCityIds)
+        {
+            List<int> existingCityIds;
+
+            if (role == UserRole.CityUser)
+            {
+                existingCityIds = await _context.PublicUserCityMappings
+                    .Where(m => m.UserID == userId && m.IsActive)
+                    .Select(x => x.CityID)
+                    .ToListAsync();
+            }
+            else
+            {
+                existingCityIds = await _context.UserCityMappings
+                    .Where(m => m.UserID == userId && m.AssignedByUserId == assignedByUserId && !m.IsDeleted)
+                    .Select(m => m.CityID)
+                    .ToListAsync();
+            }
+
+            var citiesToAdd = newCityIds.Except(existingCityIds).ToList();
+            var citiesToDelete = existingCityIds.Except(newCityIds).ToList();
+            return (citiesToAdd, citiesToDelete);
         }
 
         #endregion

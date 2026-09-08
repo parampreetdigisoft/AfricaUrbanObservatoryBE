@@ -1774,7 +1774,7 @@ namespace AfricaUrbanObservatory.Common.Implementation
         {
             var logoPath = Path.Combine(
                 Directory.GetCurrentDirectory(),
-                "wwwroot/assets/images/veridian-urban-index.png");
+                "wwwroot/assets/images/afican-urban-index.png");
 
             container.Column(column =>
             {
@@ -1820,7 +1820,7 @@ namespace AfricaUrbanObservatory.Common.Implementation
         {
             var logoPath = Path.Combine(
                 Directory.GetCurrentDirectory(),
-                "wwwroot/assets/images/veridian-urban-index.png");
+                "wwwroot/assets/images/afican-urban-index.png");
 
             container.Column(column =>
             {

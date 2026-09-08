@@ -44,13 +44,11 @@ namespace AfricaUrbanObservatory.Services
                     _ => x => !x.IsDeleted && x.Role == UserRole.Evaluator
                 };
 
-                // Build one-row-per-user by taking at most 1 mapping row per user
-                // NOTE: use a deterministic column to order (e.g., CreatedAt or primary key).
                 var query =
                     from u in _context.Users.Where(predicate)
                     from uc in filteredMappings
                                 .Where(m => m.UserID == u.UserID)
-                                .Take(1)
+                                .Take(1).DefaultIfEmpty()
                     from ab in _context.Users
                                 .Where(p => uc != null && p.UserID == uc.AssignedByUserId)
                                 .DefaultIfEmpty()
@@ -61,11 +59,12 @@ namespace AfricaUrbanObservatory.Services
                         Email = u.Email,
                         Phone = u.Phone,
                         Role = u.Role.ToString(),
-                        CreatedBy = uc != null ? uc.AssignedByUserId : null,
+                        CreatedBy = uc != null ? uc.AssignedByUserId : u.CreatedBy,
                         IsDeleted = u.IsDeleted,
                         IsEmailConfirmed = u.IsEmailConfirmed,
                         CreatedAt = u.CreatedAt,
-                        CreatedByName = ab != null ? ab.FullName : null
+                        CreatedByName = ab != null ? ab.FullName : null,
+                        Tier = u.Tier
                     };
 
 
@@ -76,34 +75,76 @@ namespace AfricaUrbanObservatory.Services
                          x.Email.Contains(request.SearchText) ||
                          x.FullName.Contains(request.SearchText));
 
-                // Get all cities for fetched users in one query
                 var userIds = response.Data.Select(x => x.UserID).Distinct().ToList();
-                var cityMap = await _context.UserCityMappings
-                .Where(x => !x.IsDeleted && userIds.Contains(x.UserID) && (x.AssignedByUserId == request.UserID || currentUser.Role == UserRole.Admin))
-                .Join(_context.Cities,
-                      cm => cm.CityID,
-                      c => c.CityID,
-                      (cm, c) => new
-                      {
-                          cm.UserID,
-                          City = new AddUpdateCityDto
-                          {
-                              CityID = c.CityID,
-                              CityName = c.CityName,
-                              Region = c.Region,
-                              AdministrativeDivision = c.AdministrativeDivision
-                          }
-                      })
-                .ToListAsync();
 
-                var result = cityMap
-                    .GroupBy(x => x.UserID)
-                    .ToDictionary(g => g.Key, g => g.Select(x => x.City).ToList());
-
-                foreach (var item in response.Data)
+                if (request.GetUserRole == UserRole.CityUser)
                 {
-                    result.TryGetValue(item.UserID, out var cities);
-                    item.cities = cities ?? new List<AddUpdateCityDto>();
+                    var cityMap = await _context.PublicUserCityMappings
+                        .Where(x => x.IsActive && userIds.Contains(x.UserID))
+                        .Join(_context.Cities,
+                              cm => cm.CityID,
+                              c => c.CityID,
+                              (cm, c) => new
+                              {
+                                  cm.UserID,
+                                  City = new AddUpdateCityDto
+                                  {
+                                      CityID = c.CityID,
+                                      CityName = c.CityName,
+                                      Region = c.Region,
+                                      AdministrativeDivision = c.AdministrativeDivision
+                                  }
+                              })
+                        .ToListAsync();
+
+                    var pillarMap = await _context.CityUserPillarMappings
+                        .Where(x => x.IsActive && userIds.Contains(x.UserID))
+                        .Select(x => new { x.UserID, x.PillarID })
+                        .ToListAsync();
+
+                    var citiesGrouped = cityMap.GroupBy(x => x.UserID)
+                        .ToDictionary(g => g.Key, g => g.Select(x => x.City).ToList());
+                    var pillarsGrouped = pillarMap.GroupBy(x => x.UserID)
+                        .ToDictionary(g => g.Key, g => g.Select(x => x.PillarID).ToList());
+
+                    foreach (var item in response.Data)
+                    {
+                        citiesGrouped.TryGetValue(item.UserID, out var cities);
+                        pillarsGrouped.TryGetValue(item.UserID, out var pillars);
+                        item.cities = cities ?? new List<AddUpdateCityDto>();
+                        item.Pillars = pillars ?? new List<int>();
+                    }
+                }
+                else
+                {
+                    var cityMap = await _context.UserCityMappings
+                    .Where(x => !x.IsDeleted && userIds.Contains(x.UserID) && (x.AssignedByUserId == request.UserID || currentUser.Role == UserRole.Admin))
+                    .Join(_context.Cities,
+                          cm => cm.CityID,
+                          c => c.CityID,
+                          (cm, c) => new
+                          {
+                              cm.UserID,
+                              City = new AddUpdateCityDto
+                              {
+                                  CityID = c.CityID,
+                                  CityName = c.CityName,
+                                  Region = c.Region,
+                                  AdministrativeDivision = c.AdministrativeDivision
+                              }
+                          })
+                    .ToListAsync();
+
+                    var result = cityMap
+                        .GroupBy(x => x.UserID)
+                        .ToDictionary(g => g.Key, g => g.Select(x => x.City).ToList());
+
+                    foreach (var item in response.Data)
+                    {
+                        result.TryGetValue(item.UserID, out var cities);
+                        item.cities = cities ?? new List<AddUpdateCityDto>();
+                        item.Pillars = new List<int>();
+                    }
                 }
 
                 return response;

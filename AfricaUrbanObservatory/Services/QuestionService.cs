@@ -501,7 +501,7 @@ namespace AfricaUrbanObservatory.Services
 
                 // ── Row 1 : Title ─────────────────────────────────────
                 var title = ws.Range("A1:D1").Merge();
-                title.Value = "VERIDIAN URBAN INDEX — CITY ASSESSMENT";
+                title.Value = "AFRICAN URBAN INDEX — CITY ASSESSMENT";
                 title.Style.Font.Bold = true;
                 title.Style.Font.FontSize = 13;
                 title.Style.Font.FontColor = XLColor.White;

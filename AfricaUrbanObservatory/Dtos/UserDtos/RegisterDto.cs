@@ -1,4 +1,5 @@
-﻿using AfricaUrbanObservatory.Models;
+﻿using AfricaUrbanObservatory.Enums;
+using AfricaUrbanObservatory.Models;
 
 namespace AfricaUrbanObservatory.Dtos.UserDtos
 {
@@ -9,12 +10,14 @@ namespace AfricaUrbanObservatory.Dtos.UserDtos
         public string Phone { get; set; }
         public string Password { get; set; } = "sdfjru32brjfew";
         public UserRole Role { get; set; }
+        public TieredAccessPlan? Tier { get; set; }
+        public List<int>? Pillars { get; set; }
     }
     public class InviteUserDto : RegisterDto
     {
         public int InvitedUserID { get; set; }
         public List<int> CityID { get; set; } = new();
-
+        public bool IsAllCities { get; set; }
     }
 
     public class InviteBulkUserDto

@@ -1,0 +1,92 @@
+@model AfricaUrbanObservatory.Views.EmailModels.EmailInvitationSendRequestDto
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>@Model.Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+<body style="margin:0;padding:0;background:#F4F5F0;font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#F4F5F0" style="padding:32px 12px;">
+        <tr>
+            <td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(15,45,36,0.08);">
+
+                    <tr>
+                        <td align="center" style="padding:28px 28px 16px;background:#ffffff;">
+                            <img src="@($"{Model.ApiUrl}/assets/images/afican-urban-index.png")"
+                                 alt="African Urban Index"
+                                 width="120"
+                                 style="height:88px;width:auto;max-width:180px;display:block;margin:0 auto 12px;border:0;" />
+                            <div style="font-size:11px;letter-spacing:2.4px;font-weight:700;color:#C8994E;text-transform:uppercase;">
+                                African Urban Index
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="height:3px;line-height:3px;font-size:0;background:#C8994E;">&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td align="center" style="padding:18px 28px;background:#1B4A3A;">
+                            <div style="font-size:20px;line-height:1.35;font-weight:600;color:#ffffff;">
+                                @Model.Title
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding:32px 36px 24px;font-size:15px;color:#444444;line-height:1.7;">
+                            <p style="margin:0 0 16px;color:#1A2E28;">Dear Colleague,</p>
+                            <p style="margin:0 0 16px;">
+                                Your city user account for the <strong style="color:#1B4A3A;">African Urban Index</strong> platform is now active.
+                                You have been granted access to the cities and pillars assigned to your plan and can begin exploring the urban intelligence workspace.
+                            </p>
+                            <p style="margin:0 0 18px;">Please use the secure link below to create your password and access your dashboard:</p>
+
+                            <table cellpadding="0" cellspacing="0" align="center" style="margin:8px auto 22px;">
+                                <tr>
+                                    <td align="center" bgcolor="#1B4A3A" style="border-radius:8px;">
+                                        <a href="@Model.ResetPasswordUrl"
+                                           style="display:inline-block;padding:13px 24px;background:#1B4A3A;color:#ffffff;text-decoration:none;font-weight:600;border-radius:8px;font-size:15px;">
+                                            Set Your Password
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="margin:0 0 12px;color:#1A2E28;"><strong>As a city user, you will be able to:</strong></p>
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+                                <tr>
+                                    <td style="padding:16px 18px;background:#E4EDE0;border-left:4px solid #C8994E;color:#1B4A3A;font-size:14px;line-height:1.7;">
+                                        • Review assigned city scores, pillars and KPIs<br />
+                                        • Compare cities within your access plan<br />
+                                        • Explore analytical layers for the cities assigned to you
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="margin:0 0 16px;">If you already have an active password, simply log in and continue your work.</p>
+                            <p style="margin:0 0 16px;">
+                                For assistance or system-related support, contact:
+                                <a href="mailto:@Model.Mail" style="color:#1B4A3A;font-weight:600;text-decoration:none;">@Model.Mail</a>
+                            </p>
+                            <p style="margin:0;">Thank you for joining the African Urban Index platform.</p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding:22px 36px 28px;background:#F6F7F4;font-size:13px;color:#6B7A74;border-top:1px solid #E4EDE0;">
+                            <p style="margin:0 0 4px;color:#1B4A3A;">Warm regards,</p>
+                            <p style="margin:0;color:#1B4A3A;font-weight:700;">African Urban Index – Platform Administration</p>
+                            <p style="margin:10px 0 0;font-size:12px;color:#8AA682;">Cities for a thriving Africa</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

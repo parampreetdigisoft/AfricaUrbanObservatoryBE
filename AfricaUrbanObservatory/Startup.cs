@@ -58,10 +58,10 @@ namespace AfricaUrbanObservatory
                 {
                     builder.WithOrigins(
                         "http://localhost:4200",
-                        "http://veridianurbansystems.com",
-                        "https://veridianurbansystems.com",
-                        "http://portal.veridianurbansystems.com",
-                        "https://portal.veridianurbansystems.com"
+                        "http://africanurbanobservatory.net",
+                        "https://africanurbanobservatory.net",
+                        "http://admin.africanurbanobservatory.net",
+                        "https://admin.africanurbanobservatory.net"
                         )
                         .AllowAnyHeader()
                         .AllowAnyMethod()

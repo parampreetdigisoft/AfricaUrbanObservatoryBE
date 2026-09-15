@@ -4,7 +4,7 @@ using Microsoft.Extensions.Configuration;
 namespace AfricaUrbanObservatory.Backgroundjob
 {
     /// <summary>
-    /// Refreshes emerging trends in memory on a schedule. Retries every 10s until success (no cache on failure).
+    /// Refreshes emerging trends every 10 minutes. Failed refreshes keep the last good in-memory and disk snapshot.
     /// </summary>
 public class EmergingTrendsCacheWorker : BackgroundService
     {
@@ -30,7 +30,15 @@ public class EmergingTrendsCacheWorker : BackgroundService
             var retryDelay = TimeSpan.FromSeconds(
                 _configuration.GetValue("EmergingTrendsCache:RetryDelaySeconds", 10));
 
-            await RefreshUntilCachedAsync(cityCount, retryDelay, stoppingToken);
+            var hydrated = HydrateFromDisk(cityCount);
+            if (!hydrated)
+            {
+                await RefreshUntilCachedAsync(cityCount, retryDelay, stoppingToken);
+            }
+            else
+            {
+                await TryRefreshAsync(cityCount, stoppingToken);
+            }
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -68,6 +76,31 @@ public class EmergingTrendsCacheWorker : BackgroundService
                     break;
                 }
             }
+        }
+
+        private bool HydrateFromDisk(int cityCount)
+        {
+            try
+            {
+                using var scope = _serviceProvider.CreateScope();
+                var publicService = scope.ServiceProvider.GetRequiredService<IPublicService>();
+                if (publicService.HydrateEmergingTrendsCacheFromDisk(cityCount))
+                {
+                    _logger.LogInformation(
+                        "Emerging trends cache hydrated from disk (cityCount={cityCount})",
+                        cityCount);
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Emerging trends disk hydrate failed (cityCount={cityCount})",
+                    cityCount);
+            }
+
+            return false;
         }
 
         private async Task<bool> TryRefreshAsync(int cityCount, CancellationToken stoppingToken)

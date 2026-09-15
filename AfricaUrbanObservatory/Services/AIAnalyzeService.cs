@@ -333,7 +333,7 @@ namespace AfricaUrbanObservatory.Services
 
         public static string PillarLiveSignals() => $"{ChatPath}/pillar-live-signals";
         public static string EmergingTrendsAndIssues(int city_count) =>
-            $"{ChatPath}/emerging-trends-and-issues?city_count={city_count}";
+            $"{ChatPath}/emerging-trends-and-issues?cityCount={city_count}";
     }
 
     #endregion

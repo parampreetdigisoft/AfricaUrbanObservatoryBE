@@ -407,16 +407,99 @@ namespace AfricaUrbanObservatory.Services
             }
         }
                
+        private static readonly object EmergingTrendsDiskLock = new();
+
+        private static readonly JsonSerializerOptions EmergingTrendsJsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+        };
+
+        private static readonly string[] UrbanStoryTokens =
+        {
+            "urban", "city", "cities", "municipal", "municipality", "metro",
+            "metropolitan", "township", "housing", "infrastructure", "transport",
+            "traffic", "mayor", "council", "drainage", "sanitation", "flood",
+            "slum", "roads", "transit"
+        };
+
+        private static readonly string[] HealthOnlyTokens =
+        {
+            "hospital", "vaccine", "vaccination", "malaria", "hiv", "aids",
+            "cholera", "ebola", "outbreak", "epidemic", "pandemic", "clinic",
+            "disease", "patient", "healthcare", "health care", "immunisation",
+            "immunization", "who warns", "ministry of health"
+        };
+
         private static string EmergingTrendsCacheKey(int cityCount) =>
-           $"EmergingTrendsAndIssues_{cityCount }";
+           $"EmergingTrendsAndIssues_{cityCount}";
         private static string EmergingTrendsStaleCacheKey(int cityCount) =>
             $"EmergingTrendsAndIssues_Stale_{cityCount}";
 
         private TimeSpan EmergingTrendsCacheDuration =>
-            TimeSpan.FromHours(_configuration.GetValue("EmergingTrendsCache:CacheExpirationHours", 12));
+            TimeSpan.FromHours(_configuration.GetValue("EmergingTrendsCache:CacheExpirationHours", 48));
 
         private TimeSpan EmergingTrendsStaleCacheDuration =>
-            TimeSpan.FromHours(_configuration.GetValue("EmergingTrendsCache:StaleCacheExpirationHours", 168));
+            TimeSpan.FromHours(_configuration.GetValue("EmergingTrendsCache:StaleCacheExpirationHours", 48));
+
+        private int ConfiguredEmergingTrendsCityCount(int fallback = 8) =>
+            _configuration.GetValue("EmergingTrendsCache:CityCount", fallback);
+
+        private string EmergingTrendsDiskPath(int cityCount)
+        {
+            var root = !string.IsNullOrWhiteSpace(_env.WebRootPath)
+                ? _env.WebRootPath
+                : Path.Combine(_env.ContentRootPath, "wwwroot");
+
+            return Path.Combine(root, "data", $"emerging_trends_cache_{cityCount}.json");
+        }
+
+        private static bool HasUsableEmergingTrends(EmergingTrendsResult? data) =>
+            data?.Cities != null && data.Cities.Any(IsUsableUrbanCard);
+
+        private static bool ContainsAnyToken(string text, IEnumerable<string> tokens) =>
+            tokens.Any(token => text.Contains(token, StringComparison.OrdinalIgnoreCase));
+
+        private static bool IsUsableUrbanCard(EmergingTrendCityCard? card)
+        {
+            if (card == null
+                || string.IsNullOrWhiteSpace(card.City)
+                || string.IsNullOrWhiteSpace(card.Title)
+                || string.IsNullOrWhiteSpace(card.SourceUrl))
+            {
+                return false;
+            }
+
+            var storyText = $"{card.Title} {card.Summary} {card.Category}";
+            var isHealthCategory = string.Equals(card.Category, "Health", StringComparison.OrdinalIgnoreCase);
+            var looksHealthOnly = ContainsAnyToken(storyText, HealthOnlyTokens);
+            var looksUrban = ContainsAnyToken(storyText, UrbanStoryTokens);
+
+            if ((isHealthCategory || looksHealthOnly) && !looksUrban)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static EmergingTrendsResult? FilterToUsableUrbanFeed(EmergingTrendsResult? data)
+        {
+            if (data?.Cities == null)
+            {
+                return null;
+            }
+
+            var cities = data.Cities.Where(IsUsableUrbanCard).ToList();
+            if (cities.Count == 0)
+            {
+                return null;
+            }
+
+            data.Cities = cities;
+            return data;
+        }
 
         private bool TryGetEmergingTrendsFromCache(
             int cityCount,
@@ -426,7 +509,7 @@ namespace AfricaUrbanObservatory.Services
             result = null;
 
             if (_cache.TryGetValue(EmergingTrendsCacheKey(cityCount), out EmergingTrendsResult? cached)
-                && cached?.Cities?.Count > 0)
+                && HasUsableEmergingTrends(cached))
             {
                 result = cached;
                 return true;
@@ -434,19 +517,90 @@ namespace AfricaUrbanObservatory.Services
 
             if (allowStale
                 && _cache.TryGetValue(EmergingTrendsStaleCacheKey(cityCount), out EmergingTrendsResult? stale)
-                && stale?.Cities?.Count > 0)
+                && HasUsableEmergingTrends(stale))
             {
                 result = stale;
+                return true;
+            }
+
+            if (allowStale && TryReadEmergingTrendsFromDisk(cityCount, out var disk) && disk != null)
+            {
+                result = disk;
+                SetEmergingTrendsCache(cityCount, disk, updateStale: true, persistToDisk: false);
                 return true;
             }
 
             return false;
         }
 
+        private bool TryReadEmergingTrendsFromDisk(int cityCount, out EmergingTrendsResult? result)
+        {
+            result = null;
+            var path = EmergingTrendsDiskPath(cityCount);
+
+            try
+            {
+                if (!File.Exists(path))
+                {
+                    return false;
+                }
+
+                string json;
+                lock (EmergingTrendsDiskLock)
+                {
+                    json = File.ReadAllText(path);
+                }
+
+                var snapshot = JsonSerializer.Deserialize<EmergingTrendsDiskSnapshot>(json, EmergingTrendsJsonOptions);
+                var data = FilterToUsableUrbanFeed(snapshot?.Data);
+                if (data == null)
+                {
+                    return false;
+                }
+
+                result = data;
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void WriteEmergingTrendsToDisk(int cityCount, EmergingTrendsResult data)
+        {
+            try
+            {
+                var path = EmergingTrendsDiskPath(cityCount);
+                var directory = Path.GetDirectoryName(path);
+                if (!string.IsNullOrWhiteSpace(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                var snapshot = new EmergingTrendsDiskSnapshot
+                {
+                    SavedAtUtc = DateTime.UtcNow,
+                    Data = data
+                };
+
+                var json = JsonSerializer.Serialize(snapshot, EmergingTrendsJsonOptions);
+                lock (EmergingTrendsDiskLock)
+                {
+                    File.WriteAllText(path, json);
+                }
+            }
+            catch (Exception ex)
+            {
+                _ = _appLogger.LogAsync("Failed to persist emerging trends cache to disk.", ex);
+            }
+        }
+
         private void SetEmergingTrendsCache(
             int cityCount,
             EmergingTrendsResult data,
-            bool updateStale = true)
+            bool updateStale = true,
+            bool persistToDisk = true)
         {
             var cacheOptions = new MemoryCacheEntryOptions
             {
@@ -468,6 +622,11 @@ namespace AfricaUrbanObservatory.Services
                     }
                 );
             }
+
+            if (persistToDisk)
+            {
+                WriteEmergingTrendsToDisk(cityCount, data);
+            }
         }
 
         private bool PreserveEmergingTrendsCacheOnRefreshFailure(int cityCount)
@@ -478,7 +637,20 @@ namespace AfricaUrbanObservatory.Services
                 return false;
             }
 
-            SetEmergingTrendsCache(cityCount, stale, updateStale: false);
+            SetEmergingTrendsCache(cityCount, stale, updateStale: false, persistToDisk: false);
+            return true;
+        }
+
+        public bool HydrateEmergingTrendsCacheFromDisk(int cityCount)
+        {
+            cityCount = ConfiguredEmergingTrendsCityCount(cityCount);
+
+            if (!TryReadEmergingTrendsFromDisk(cityCount, out var disk) || disk == null)
+            {
+                return false;
+            }
+
+            SetEmergingTrendsCache(cityCount, disk, updateStale: true, persistToDisk: false);
             return true;
         }
 
@@ -486,10 +658,10 @@ namespace AfricaUrbanObservatory.Services
         {
             try
             {
-                cityCount = _configuration.GetValue("EmergingTrendsCache:CityCount", 8);
+                cityCount = ConfiguredEmergingTrendsCityCount(8);
 
                 if (TryGetEmergingTrendsFromCache(cityCount, out var cachedResult, allowStale: true)
-                    && cachedResult != null)
+                    && HasUsableEmergingTrends(cachedResult))
                 {
                     var fromPrimary = _cache.TryGetValue(
                         EmergingTrendsCacheKey(cityCount),
@@ -520,6 +692,19 @@ namespace AfricaUrbanObservatory.Services
                     ex
                 );
 
+                cityCount = ConfiguredEmergingTrendsCityCount(8);
+                if (TryGetEmergingTrendsFromCache(cityCount, out var fallback, allowStale: true)
+                    && HasUsableEmergingTrends(fallback))
+                {
+                    return ResultResponseDto<EmergingTrendsResult>.Success(
+                        fallback,
+                        new List<string>
+                        {
+                            "Emerging trends and issues fetched successfully from last known data."
+                        }
+                    );
+                }
+
                 return ResultResponseDto<EmergingTrendsResult>.Failure(
                     new[]
                     {
@@ -535,11 +720,11 @@ namespace AfricaUrbanObservatory.Services
         {
             try
             {
-                cityCount = _configuration.GetValue("EmergingTrendsCache:CityCount", cityCount);
+                cityCount = ConfiguredEmergingTrendsCityCount(cityCount);
 
                 var enriched = await FetchAndEnrichEmergingTrendsAsync(cityCount, cancellationToken);
 
-                if (enriched?.Cities?.Count > 0)
+                if (HasUsableEmergingTrends(enriched) && enriched != null)
                 {
                     SetEmergingTrendsCache(cityCount, enriched);
                     return true;
@@ -568,12 +753,7 @@ namespace AfricaUrbanObservatory.Services
                 return null;
             }
 
-            if (result.Result.Cities == null || result.Result.Cities.Count == 0)
-            {
-                return null;
-            }            
-
-            return result.Result;
+            return FilterToUsableUrbanFeed(result.Result);
         }
 
     }
